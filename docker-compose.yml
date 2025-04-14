@@ -41,6 +41,61 @@ services:
       retries: 5
       start_period: 60s
 
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: postgres-auth
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=auth_db
+      - POSTGRES_USER=${DB_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - yobel-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d auth_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  auth-ms:
+    build:
+      context: ./auth-ms
+      dockerfile: Dockerfile
+    container_name: auth-ms
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
+      - CONFIG_SERVER_HOST=config-server:8888
+      - CONFIG_SERVER_PASSWORD=${CONFIG_SERVER_PASSWORD:-configpassword}
+      - EUREKA_URI=http://service-discovery:8761/eureka/
+      - DB_HOST=postgres-auth
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - JWT_SECRET=${JWT_SECRET:-8e03811e9e3cbfdaae5ff8f8e04417e1a50e1d31abb44ebf1ebaf6e7ade6c635}
+    depends_on:
+      service-discovery:
+        condition: service_healthy
+      postgres-auth:
+        condition: service_healthy
+    networks:
+      - yobel-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/api/health" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres-auth-data:
+    driver: local
+
 networks:
   yobel-network:
     driver: bridge
