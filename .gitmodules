@@ -4,3 +4,6 @@
 [submodule "service-discovery"]
 	path = service-discovery
 	url = https://github.com/Yobel-SCM-2/service-discovery
+[submodule "auth-ms"]
+	path = auth-ms
+	url = https://github.com/Yobel-SCM-2/auth-ms
